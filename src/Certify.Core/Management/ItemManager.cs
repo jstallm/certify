@@ -56,11 +56,14 @@ namespace Certify.Management
                 // System.IO.File.WriteAllText(appDataPath + "\\" + ITEMMANAGERCONFIG, siteManagerConfig);
 
                 // serialize JSON directly to a file
+                var st = System.Diagnostics.Stopwatch.StartNew();
                 using (StreamWriter file = File.CreateText(path))
                 {
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.Serialize(file, this.ManagedSites);
                 }
+                st.Stop();
+                System.Diagnostics.Debug.WriteLine($"Json Stored {this.ManagedSites.Count} managed sites in {st.ElapsedMilliseconds}ms");
 
                 /*using (FileStream fs = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite))
                 {
@@ -80,6 +83,18 @@ namespace Certify.Management
                     }
                 }*/
             }
+
+            var st2 = new System.Diagnostics.Stopwatch();
+
+            using (var db = new LiteDB.LiteDatabase(appDataPath + "\\ManagedSites.db"))
+            {
+                var collection = db.GetCollection<ManagedSite>("managedsites");
+
+                st2.Start();
+                collection.InsertBulk(this.ManagedSites);
+            }
+            st2.Stop();
+            System.Diagnostics.Debug.WriteLine($"DB Stored {this.ManagedSites.Count} managed sites in {st2.ElapsedMilliseconds}ms");
         }
 
         public void LoadSettings()
@@ -118,6 +133,12 @@ namespace Certify.Management
                     }
 
                     this.ManagedSites = managedSites;
+
+                    using (var db = new LiteDB.LiteDatabase(appDataPath + "\\ManagedSites.db"))
+                    {
+                        var collection = db.GetCollection<ManagedSite>("managedsites");
+                        var testList = collection.FindAll().ToList();
+                    }
 
                     //foreach managed site enable change notification for edits to domainoptions
                     foreach (var s in this.ManagedSites)

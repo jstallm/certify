@@ -147,8 +147,6 @@ namespace Certify.CLI
                      }*/
                 }
             }
-
-            siteManager.StoreSettings();
         }
 
         private async Task<System.Collections.Generic.List<CertificateRequestResult>> PerformAutoRenew()
