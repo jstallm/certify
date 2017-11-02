@@ -46,11 +46,12 @@ namespace Certify
 
         #region Vault
 
-        public VaultManager(string vaultFolderPath, string vaultFilename)
+        public VaultManager(string vaultFolderPath, string vaultFilename, string vaultProfileName = null)
         {
             Certify.Management.Util.SetSupportedTLSVersions();
             this.vaultFolderPath = vaultFolderPath;
             this.vaultFilename = vaultFilename;
+            this.vaultProfile = vaultProfileName;
 
             this.ActionLogs = new List<ActionLogItem>();
             this.ActionLogs.Capacity = 1000;
@@ -65,6 +66,7 @@ namespace Certify
 
             //register default PKI provider
             //ACMESharp.PKI.CertificateProvider.RegisterProvider<ACMESharp.PKI.Providers.OpenSslLibProvider>();
+
             ACMESharp.PKI.CertificateProvider.RegisterProvider<ACMESharp.PKI.Providers.BouncyCastleProvider>();
         }
 
@@ -310,10 +312,19 @@ namespace Certify
 
         public string GetVaultPath()
         {
-            using (var vlt = (LocalDiskVault)ACMESharpUtils.GetVault(this.vaultProfile))
+            using (var vlt = ACMESharpUtils.GetVault(this.vaultProfile))
             {
-                this.vaultFolderPath = vlt.RootPath;
+                if (vlt is LocalDiskVault)
+                {
+                    this.vaultFolderPath = ((LocalDiskVault)vlt).RootPath;
+                }
+
+                if (vlt is Utils.LiteDBVault)
+                {
+                    this.vaultFolderPath = ((Utils.LiteDBVault)vlt).RootPath;
+                }
             }
+
             return this.vaultFolderPath;
         }
 

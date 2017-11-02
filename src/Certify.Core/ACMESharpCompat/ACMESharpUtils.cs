@@ -73,7 +73,9 @@ namespace Certify.ACMESharpCompat
                 throw new InvalidOperationException("unable to resolve effective profile")
                         .With(nameof(profileName), profileName);
 
-            var provider = VaultExtManager.GetProvider(profile.ProviderName, null);
+            //var provider = VaultExtManager.GetProvider(profile.ProviderName, null);
+            var provider = new Utils.SqlLiteVaultProvider();
+
             if (provider == null)
                 throw new InvalidOperationException("unable to resolve Vault Provider")
                         .With(nameof(profileName), profileName)

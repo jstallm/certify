@@ -65,6 +65,7 @@
     <Compile Include="IntegrationTestBase.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VaultManagerTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -77,6 +78,10 @@
     <ProjectReference Include="..\..\Certify.Core\Certify.Core.csproj">
       <Project>{87baa9ca-e0c9-4d3e-8971-55a30134c932}</Project>
       <Name>Certify.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\lib\ACMESharp\ACMESharp\ACMESharp.Vault\ACMESharp.Vault.csproj">
+      <Project>{65B4C6E0-27A0-445C-ADAC-9D8308E2E4A6}</Project>
+      <Name>ACMESharp.Vault</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
