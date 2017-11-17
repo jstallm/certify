@@ -509,17 +509,17 @@ namespace Certify.Management
                                 LogMessage(managedSite.Id, "Failed to parse certificate dates", LogItemType.GeneralError);
                             }
 
-                            if (managedSite.ItemType == ManagedItemType.SSL_LetsEncrypt_LocalIIS && config.PerformAutomatedCertBinding)
+                            if (managedSite.ItemType == ManagedItemType.SSL_LetsEncrypt_LocalIIS)
                             {
                                 ReportProgress(progress, new RequestProgressState { CurrentState = RequestState.Running, Message = CoreSR.CertifyManager_AutoBinding });
+
+                                _siteManager.UpdatedManagedSite(managedSite);
 
                                 // Install certificate into certificate store and bind to IIS site
                                 if (_iisManager.InstallCertForRequest(managedSite, pfxPath, cleanupCertStore: true))
                                 {
                                     //all done
                                     LogMessage(managedSite.Id, CoreSR.CertifyManager_CompleteRequestAndUpdateBinding, LogItemType.CertificateRequestSuccessful);
-
-                                    _siteManager.UpdatedManagedSite(managedSite);
 
                                     result.IsSuccess = true;
                                     result.Message = string.Format(CoreSR.CertifyManager_CertificateInstalledAndBindingUpdated, config.PrimaryDomain);
