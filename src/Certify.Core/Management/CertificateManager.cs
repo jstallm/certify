@@ -12,12 +12,9 @@ using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Certify.Management
 {
@@ -86,13 +83,69 @@ namespace Certify.Management
             return cert;
         }
 
-        public static X509Certificate2 StoreCertificate(string host, string pfxFile)
+        public static X509Certificate2 StoreCertificateOld(string host, string pfxFile)
         {
             var certificate = new X509Certificate2(pfxFile, "", X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
             certificate.GetExpirationDateString();
             certificate.FriendlyName = host + " [Certify] - " + certificate.GetEffectiveDateString() + " to " + certificate.GetExpirationDateString();
 
             return StoreCertificate(certificate);
+        }
+
+        public static X509Certificate2 GetCertificateByThumbprint(string thumbprint)
+        {
+            X509Certificate2 cert = null;
+            var store = GetDefaultStore();
+            store.Open(OpenFlags.OpenExistingOnly | OpenFlags.ReadOnly);
+            X509Certificate2Collection results = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, false);
+            if (results.Count > 0)
+            {
+                cert = results[0];
+            }
+            store.Close();
+            return cert;
+        }
+
+        public static X509Certificate2 StoreCertificate(string host, string pfxFile, bool isRetry = false)
+        {
+            // https://support.microsoft.com/en-gb/help/950090/installing-a-pfx-file-using-x509certificate-from-a-standard--net-appli
+            var certificate = new X509Certificate2(pfxFile, "", X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
+            certificate.GetExpirationDateString();
+            certificate.FriendlyName = host + " [Certify] - " + certificate.GetEffectiveDateString() + " to " + certificate.GetExpirationDateString();
+
+            var cert = StoreCertificate(certificate);
+
+            System.Threading.Thread.Sleep(500);
+
+            // now check if cert is accessible and private key is OK (in some cases cert is not
+            // storing private key properly)
+            var storedCert = GetCertificateByThumbprint(cert.Thumbprint);
+
+            if (!isRetry)
+            {
+                // hack/workaround - importing cert from system account causes private key to be
+                // transient. Re-import the same cert fixes it. re -try apply .net dev on why
+                // re-import helps with private key: https://stackoverflow.com/questions/40892512/add-a-generated-certificate-to-the-store-and-update-an-iis-site-binding
+                return StoreCertificate(host, pfxFile, isRetry: true);
+            }
+
+            if (storedCert == null)
+            {
+                throw new Exception("Certificate not found in store!");
+            }
+            else
+            {
+                try
+                {
+                    var k = storedCert.PrivateKey.KeyExchangeAlgorithm;
+                    Debug.WriteLine(k);
+                    return storedCert;
+                }
+                catch (Exception)
+                {
+                    throw new Exception("Certificate Private Key not available.");
+                }
+            }
         }
 
         public static X509Certificate2 StoreCertificate(X509Certificate2 certificate)
@@ -122,8 +175,8 @@ namespace Certify.Management
         /// Remove old certificates we have created previously (based on a matching prefix string,
         /// compared to our new certificate)
         /// </summary>
-        /// <param name="certificate">The new cert to keep</param>
-        /// <param name="hostPrefix">The cert friendly name prefix to match certs to clean up</param>
+        /// <param name="certificate"> The new cert to keep </param>
+        /// <param name="hostPrefix"> The cert friendly name prefix to match certs to clean up </param>
         public static void CleanupCertificateDuplicates(X509Certificate2 certificate, string hostPrefix)
         {
             // TODO: remove distinction, this is legacy from the old version which didn't have a
